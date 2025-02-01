@@ -24,12 +24,22 @@ jobs:
           java-version: 17
           cache: maven
 
+      - name: Verify Maven Wrapper
+        run: |
+          cd backend
+          mvn -N io.takari:maven:wrapper
+
+      - name: Install Dependencies
+        run: |
+          cd backend
+          ./mvnw clean install -DskipTests
+
       - name: Checkstyle Code Linting
         run: |
           cd backend
-          ./mvn checkstyle:check
+          ./mvnw checkstyle:check
 
       - name: Run Tests
         run: |
           cd backend
-          ./mvn test
+          ./mvnw test
