@@ -27,9 +27,9 @@ jobs:
       - name: Checkstyle Code Linting
         run: |
           cd backend
-          ./mvnw checkstyle:check
+          ./mvn checkstyle:check
 
       - name: Run Tests
         run: |
           cd backend
-          ./mvnw test
+          ./mvn test
