@@ -32,8 +32,7 @@ jobs:
       - name: Install Dependencies
         run: |
           cd backend
-          ./mvnw clean install -DskipTests
-
+          ./mvnw clean install -DskipTests -Dcheckstyle.skip=true
       - name: Checkstyle Code Linting
         run: |
           cd backend
