@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/v1/tasks")
 @RequiredArgsConstructor
@@ -154,5 +155,21 @@ public class TaskController {
 
     taskService.deleteTask(id);
     return ResponseEntity.ok("Task deleted successfully");
+  }
+
+  @PutMapping("/{id}/complete")
+  public ResponseEntity<?> completeTask(@AuthenticationPrincipal User currentUser, @PathVariable Long id) {
+    if (currentUser == null || userRepository.findByUsername(currentUser.getUsername()).isEmpty()) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found");
+    }
+
+    Task existingTask = taskService
+            .getTaskByIdAndUser(id, currentUser)
+            .orElseThrow(() -> new RuntimeException("Task not found or access denied"));
+
+    existingTask.setIsCompleted(true);
+    Task updatedTask = taskService.updateTask(existingTask);
+
+    return ResponseEntity.ok(updatedTask);
   }
 }

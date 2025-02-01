@@ -3,55 +3,56 @@ import { TextField, Button, Box, Typography } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 
 const Login = () => {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [formData, setFormData] = useState({ username: "", password: "" });
+  const [error, setError] = useState("");
   const navigate = useNavigate();
+
+  const handleChange = (e) =>
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const loginData = {
-      username,
-      password,
-    };
+    setError("");
 
     try {
-      const response = await fetch("http://localhost:8080/api/v1/auth/sign-in", {
+      const response = await fetch("http://localhost:8080/api/v1/auth/signin", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(loginData),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
       });
 
       if (response.ok) {
         const data = await response.json();
-        console.log("Login successful:", data);
-        localStorage.setItem("access_token", data.accessToken); // Store the token
-        navigate("/"); // Redirect to the main page
+        localStorage.setItem("access_token", data.accessToken);
+
+        console.log("before navigate");
+
+        setTimeout(() => {
+          navigate("/", { replace: true });
+          console.log("after navigate");
+        }, 100);
       } else {
-        console.error("Login failed");
+        const errorText = await response.text();
+        console.error("Login failed:", errorText);
+        setError("Invalid username or password.");
       }
     } catch (error) {
       console.error("Error during login:", error);
+      setError("Something went wrong. Please try again.");
     }
   };
 
   return (
     <Box
       sx={{
+        minHeight: "100vh",
+        bgcolor: "#181818",
         display: "flex",
-        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        height: "100vh",
-        backgroundColor: "#181818",
-        color: "#fff",
+        p: 2,
       }}
     >
-      <Typography variant="h4" gutterBottom>
-        Login
-      </Typography>
       <Box
         component="form"
         onSubmit={handleSubmit}
@@ -59,34 +60,48 @@ const Login = () => {
           display: "flex",
           flexDirection: "column",
           gap: 2,
-          width: "300px",
+          width: "320px",
+          bgcolor: "#282828",
+          p: 4,
+          borderRadius: 2,
+          boxShadow: 3,
         }}
       >
+        <Typography variant="h4" align="center">
+          Login
+        </Typography>
+        {error && (
+          <Typography color="error" align="center">
+            {error}
+          </Typography>
+        )}
         <TextField
           label="Username"
+          name="username"
           variant="outlined"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          value={formData.username}
+          onChange={handleChange}
           required
           fullWidth
+          InputLabelProps={{ style: { color: "#fff" } }}
+          inputProps={{ style: { color: "#fff" } }}
         />
         <TextField
           label="Password"
+          name="password"
           type="password"
           variant="outlined"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          value={formData.password}
+          onChange={handleChange}
           required
           fullWidth
+          InputLabelProps={{ style: { color: "#fff" } }}
+          inputProps={{ style: { color: "#fff" } }}
         />
         <Button type="submit" variant="contained" color="primary" fullWidth>
           Login
         </Button>
-        <Button
-          variant="text"
-          color="secondary"
-          onClick={() => navigate("/sign-up")}
-        >
+        <Button variant="text" color="secondary" onClick={() => navigate("/signup")}>
           Don't have an account? Sign up
         </Button>
       </Box>

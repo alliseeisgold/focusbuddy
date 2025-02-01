@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
-import { AppBar, Tabs, Tab, Box, ThemeProvider } from "@mui/material";
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+  Navigate,
+} from "react-router-dom";
+import { AppBar, Tabs, Tab, Box, Button, ThemeProvider, Typography } from "@mui/material";
 import { createTheme } from "@mui/material/styles";
 import CurrentTab from "./components/CurrentTab";
 import PlanTab from "./components/PlanTab";
@@ -27,28 +32,24 @@ const theme = createTheme({
 
 function App() {
   const [selectedTab, setSelectedTab] = useState(0);
-  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem("access_token"));
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    !!localStorage.getItem("access_token")
+  );
 
-  // 🔥 Следим за изменением `localStorage`
   useEffect(() => {
     const checkAuth = () => {
-      const token = localStorage.getItem("access_token");
-      setIsAuthenticated(!!token);
+      setIsAuthenticated(!!localStorage.getItem("access_token"));
     };
-
     window.addEventListener("storage", checkAuth);
-    return () => {
-      window.removeEventListener("storage", checkAuth);
-    };
+    return () => window.removeEventListener("storage", checkAuth);
   }, []);
 
-  // ✅ Функция выхода (удаляет токен и обновляет состояние)
   const handleLogout = () => {
     localStorage.removeItem("access_token");
     setIsAuthenticated(false);
   };
 
-  const handleChange = (event, newValue) => {
+  const handleTabChange = (event, newValue) => {
     setSelectedTab(newValue);
   };
 
@@ -62,23 +63,29 @@ function App() {
               isAuthenticated ? (
                 <MainPage
                   selectedTab={selectedTab}
-                  handleChange={handleChange}
-                  handleLogout={handleLogout} // ✅ Передаем logout-функцию
+                  handleTabChange={handleTabChange}
+                  handleLogout={handleLogout}
                 />
               ) : (
-                <Navigate to="/sign-in" />
+                <Navigate to="/signin" replace />
               )
             }
           />
-          <Route path="/sign-in" element={<Login setIsAuthenticated={setIsAuthenticated} />} />
-          <Route path="/sign-up" element={<Signup setIsAuthenticated={setIsAuthenticated} />} />
+          <Route
+            path="/signin"
+            element={<Login setIsAuthenticated={setIsAuthenticated} />}
+          />
+          <Route
+            path="/signup"
+            element={<Signup setIsAuthenticated={setIsAuthenticated} />}
+          />
         </Routes>
       </Router>
     </ThemeProvider>
   );
 }
 
-const MainPage = ({ selectedTab, handleChange, handleLogout }) => {
+const MainPage = ({ selectedTab, handleTabChange, handleLogout }) => {
   const [workTime, setWorkTime] = useState(25);
   const [restTime, setRestTime] = useState(5);
   const [timeLeft, setTimeLeft] = useState(workTime * 60);
@@ -88,17 +95,15 @@ const MainPage = ({ selectedTab, handleChange, handleLogout }) => {
   const [volume, setVolume] = useState(50);
 
   useEffect(() => {
-    let interval = null;
+    let timer = null;
     if (isActive && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft((prevTime) => prevTime - 1);
-      }, 1000);
+      timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
     } else if (timeLeft === 0) {
-      clearInterval(interval);
-      setIsWorkTime(!isWorkTime);
+      clearInterval(timer);
+      setIsWorkTime((prev) => !prev);
       setTimeLeft(isWorkTime ? restTime * 60 : workTime * 60);
     }
-    return () => clearInterval(interval);
+    return () => clearInterval(timer);
   }, [isActive, timeLeft, isWorkTime, workTime, restTime]);
 
   const toggleMusic = () => {
@@ -106,9 +111,9 @@ const MainPage = ({ selectedTab, handleChange, handleLogout }) => {
     if (isMusicPlaying) {
       audio.pause();
     } else {
-      audio.play().catch((error) => console.error("Audio play failed:", error));
+      audio.play().catch((err) => console.error("Audio play error:", err));
     }
-    setIsMusicPlaying(!isMusicPlaying);
+    setIsMusicPlaying((prev) => !prev);
   };
 
   const handleVolumeChange = (event, newValue) => {
@@ -121,51 +126,45 @@ const MainPage = ({ selectedTab, handleChange, handleLogout }) => {
     const audio = document.getElementById("background-music");
     if (isActive) {
       audio.pause();
-    } else {
-      if (isMusicPlaying) {
-        audio.play().catch((error) => console.error("Audio play failed:", error));
-      }
+    } else if (isMusicPlaying) {
+      audio.play().catch((err) => console.error("Audio play error:", err));
     }
-    setIsActive(!isActive);
+    setIsActive((prev) => !prev);
   };
 
   return (
-    <div style={{ backgroundColor: "#181818", color: "#fff", minHeight: "100vh" }}>
-      <audio id="background-music" loop onError={(e) => console.error("Audio error:", e)}>
+    <Box sx={{ bgcolor: "#181818", minHeight: "100vh", color: "#fff" }}>
+      <audio id="background-music" loop>
         <source src={rainSound} type="audio/wav" />
         Your browser does not support the audio element.
       </audio>
-
-      <AppBar position="static" style={{ backgroundColor: "#1f1f1f", display: "flex", flexDirection: "row", justifyContent: "space-between", padding: "10px" }}>
+      <AppBar
+        position="static"
+        sx={{
+          bgcolor: "#1f1f1f",
+          p: 1,
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: "space-between",
+        }}
+      >
         <Tabs
           value={selectedTab}
-          onChange={handleChange}
+          onChange={handleTabChange}
           variant="fullWidth"
           textColor="inherit"
           indicatorColor="secondary"
+          sx={{ flexGrow: 1 }}
         >
           <Tab label="Current" />
           <Tab label="Plan" />
           <Tab label="Pomodoro" />
           <Tab label="Habits" />
         </Tabs>
-        <button
-          onClick={handleLogout}
-          style={{
-            backgroundColor: "#f44336",
-            color: "white",
-            border: "none",
-            padding: "8px 15px",
-            cursor: "pointer",
-            borderRadius: "5px",
-            fontSize: "14px",
-            marginRight: "15px",
-          }}
-        >
+        <Button onClick={handleLogout} variant="contained" color="error" sx={{ ml: 2 }}>
           Logout
-        </button>
+        </Button>
       </AppBar>
-
       <Box sx={{ p: 3 }}>
         {selectedTab === 0 && <CurrentTab />}
         {selectedTab === 1 && <PlanTab />}
@@ -189,7 +188,7 @@ const MainPage = ({ selectedTab, handleChange, handleLogout }) => {
         )}
         {selectedTab === 3 && <HabitsTab />}
       </Box>
-    </div>
+    </Box>
   );
 };
 

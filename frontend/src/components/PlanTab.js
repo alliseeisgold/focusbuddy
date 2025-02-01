@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Typography,
   Button,
@@ -9,10 +9,15 @@ import {
   DialogActions,
   TextField,
   Divider,
+  CircularProgress,
+  Alert,
 } from "@mui/material";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import { useNavigate } from "react-router-dom";
+
+const API_URL = "http://localhost:8080/api/v1/tasks";
 
 function PlanTab() {
   const [tasks, setTasks] = useState([]);
@@ -20,12 +25,78 @@ function PlanTab() {
   const [editDialog, setEditDialog] = useState(false);
   const [newTask, setNewTask] = useState({ title: "", description: "", dueDate: "" });
   const [editingTask, setEditingTask] = useState(null);
-  const [errors, setErrors] = useState({ title: false, dueDate: false }); // State for error handling
+  const [errors, setErrors] = useState({ title: "", dueDate: "" });
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  // Открытие и закрытие диалога
+  const navigate = useNavigate();
+  const token = localStorage.getItem("access_token");
+
+  useEffect(() => {
+    if (!token) {
+      navigate("/sign-in");
+    } else {
+      fetchTasks();
+    }
+  }, [token, navigate]);
+
+  const fetchTasks = async () => {
+    setLoading(true);
+    setErrorMsg("");
+    try {
+      const response = await fetch(`${API_URL}/planned`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.status === 401) {
+        localStorage.removeItem("access_token");
+        navigate("/sign-in");
+        return;
+      }
+      if (response.ok) {
+        const data = await response.json();
+        setTasks(data);
+      } else {
+        setErrorMsg("Failed to load tasks.");
+      }
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      setErrorMsg("Error fetching tasks.");
+    }
+    setLoading(false);
+  };
+
+  // Функция валидации: проверяет, что заголовок не пустой и дата установлена правильно
+  const validateTask = (task) => {
+    let titleError = "";
+    let dueDateError = "";
+
+    if (!task.title.trim()) {
+      titleError = "Title is required";
+    }
+
+    if (!task.dueDate) {
+      dueDateError = "Due Date is required";
+    } else {
+      const selectedDate = new Date(task.dueDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (isNaN(selectedDate.getTime())) {
+        dueDateError = "Invalid date format";
+      } else if (selectedDate < today) {
+        dueDateError = "Due date must be today or in the future";
+      }
+    }
+
+    return { titleError, dueDateError };
+  };
+
+  // Открытие/закрытие диалога добавления
   const handleOpenDialog = () => {
     setNewTask({ title: "", description: "", dueDate: "" });
-    setErrors({ title: false, dueDate: false }); // Reset errors
+    setErrors({ title: "", dueDate: "" });
     setOpenDialog(true);
   };
 
@@ -33,10 +104,10 @@ function PlanTab() {
     setOpenDialog(false);
   };
 
-  // Открытие и закрытие диалога редактирования
+  // Открытие/закрытие диалога редактирования
   const handleOpenEditDialog = (task) => {
     setEditingTask(task);
-    setErrors({ title: false, dueDate: false }); // Reset errors
+    setErrors({ title: "", dueDate: "" });
     setEditDialog(true);
   };
 
@@ -44,59 +115,84 @@ function PlanTab() {
     setEditDialog(false);
   };
 
-  // Добавление задачи
-  const handleAddTask = () => {
-    const newErrors = { title: !newTask.title.trim(), dueDate: !newTask.dueDate };
-    setErrors(newErrors);
+  // Добавление задачи через API
+  const handleAddTask = async () => {
+    const { titleError, dueDateError } = validateTask(newTask);
+    setErrors({ title: titleError, dueDate: dueDateError });
+    if (titleError || dueDateError) return;
 
-    if (newErrors.title || newErrors.dueDate) {
-      return; // Stop if there are errors
+    try {
+      const response = await fetch(`${API_URL}/planned`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(newTask),
+      });
+      if (response.ok) {
+        await fetchTasks();
+        handleCloseDialog();
+      } else {
+        setErrorMsg("Error adding task.");
+      }
+    } catch (error) {
+      console.error("Error adding task:", error);
+      setErrorMsg("Error adding task.");
     }
-
-    setTasks([
-      ...tasks,
-      {
-        id: Date.now(),
-        title: newTask.title,
-        description: newTask.description,
-        dueDate: newTask.dueDate,
-      },
-    ]);
-    handleCloseDialog();
   };
 
-  // Редактирование задачи
-  const handleEditTask = () => {
-    const newErrors = { title: !editingTask.title.trim(), dueDate: !editingTask.dueDate };
-    setErrors(newErrors);
+  // Редактирование задачи через API
+  const handleEditTask = async () => {
+    if (!editingTask) return;
+    const { titleError, dueDateError } = validateTask(editingTask);
+    setErrors({ title: titleError, dueDate: dueDateError });
+    if (titleError || dueDateError) return;
 
-    if (newErrors.title || newErrors.dueDate) {
-      return; // Stop if there are errors
+    try {
+      const response = await fetch(`${API_URL}/update/${editingTask.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(editingTask),
+      });
+      if (response.ok) {
+        await fetchTasks();
+        handleCloseEditDialog();
+      } else {
+        setErrorMsg("Error updating task.");
+      }
+    } catch (error) {
+      console.error("Error updating task:", error);
+      setErrorMsg("Error updating task.");
     }
-
-    setTasks(
-      tasks.map((task) =>
-        task.id === editingTask.id
-          ? {
-              ...task,
-              title: editingTask.title,
-              description: editingTask.description,
-              dueDate: editingTask.dueDate,
-            }
-          : task
-      )
-    );
-    handleCloseEditDialog();
   };
 
-  // Удаление задачи
-  const handleDeleteTask = (id) => {
-    setTasks(tasks.filter((task) => task.id !== id));
+  // Удаление задачи через API
+  const handleDeleteTask = async (id) => {
+    try {
+      const response = await fetch(`${API_URL}/delete/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.ok) {
+        await fetchTasks();
+      } else {
+        setErrorMsg("Error deleting task.");
+      }
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      setErrorMsg("Error deleting task.");
+    }
   };
 
   return (
     <Box sx={{ mt: 2 }}>
-      {/* Кнопка "Add Task" наверху */}
+      {/* Кнопка добавления задачи */}
       <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
         <Button
           variant="contained"
@@ -108,61 +204,65 @@ function PlanTab() {
         </Button>
       </Box>
 
-      {/* Если задач нет, ничего не отображаем */}
-      {tasks.length === 0 && (
-        <Box sx={{ textAlign: "center", mt: 2 }}>
-          <Typography variant="h6" color="text.secondary">
-            No tasks planned.
-          </Typography>
-        </Box>
+      {errorMsg && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {errorMsg}
+        </Alert>
       )}
 
-      {/* Если задачи есть, отображаем их */}
-      {tasks.length > 0 && (
-        <Box>
-          <Typography variant="h6">Planned Tasks:</Typography>
-          {tasks.map((task) => (
-            <Box
-              key={task.id}
-              sx={{
-                mt: 2,
-                backgroundColor: "#292929",
-                p: 2,
-                borderRadius: "8px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <Box>
-                <Typography variant="h6">{task.title}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {task.description}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Due Date: {task.dueDate || "No due date set"}
-                </Typography>
-              </Box>
-              <Box>
-                <Button
-                  color="info"
-                  onClick={() => handleOpenEditDialog(task)}
-                >
-                  <EditIcon />
-                </Button>
-                <Button
-                  color="error"
-                  onClick={() => handleDeleteTask(task.id)}
-                >
-                  <DeleteIcon />
-                </Button>
-              </Box>
+      {loading ? (
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          {tasks.length === 0 ? (
+            <Box sx={{ textAlign: "center", mt: 2 }}>
+              <Typography variant="h6" color="text.secondary">
+                No tasks planned.
+              </Typography>
             </Box>
-          ))}
-        </Box>
+          ) : (
+            <Box>
+              <Typography variant="h6">Planned Tasks:</Typography>
+              {tasks.map((task) => (
+                <Box
+                  key={task.id}
+                  sx={{
+                    mt: 2,
+                    backgroundColor: "#292929",
+                    p: 2,
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Box>
+                    <Typography variant="h6">{task.title}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {task.description}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Due Date: {task.dueDate || "No due date set"}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Button color="info" onClick={() => handleOpenEditDialog(task)}>
+                      <EditIcon />
+                    </Button>
+                    <Button color="error" onClick={() => handleDeleteTask(task.id)}>
+                      <DeleteIcon />
+                    </Button>
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          )}
+        </>
       )}
 
-      {/* Диалог для добавления задачи */}
+      {/* Диалог для добавления новой задачи */}
       <Dialog open={openDialog} onClose={handleCloseDialog}>
         <DialogTitle>Add New Task</DialogTitle>
         <DialogContent>
@@ -173,8 +273,8 @@ function PlanTab() {
             type="text"
             fullWidth
             required
-            error={errors.title}
-            helperText={errors.title ? "Title is required" : ""}
+            error={Boolean(errors.title)}
+            helperText={errors.title}
             value={newTask.title}
             onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
           />
@@ -196,8 +296,8 @@ function PlanTab() {
             type="date"
             fullWidth
             required
-            error={errors.dueDate}
-            helperText={errors.dueDate ? "Due Date is required" : ""}
+            error={Boolean(errors.dueDate)}
+            helperText={errors.dueDate}
             InputLabelProps={{ shrink: true }}
             value={newTask.dueDate}
             onChange={(e) =>
@@ -226,8 +326,8 @@ function PlanTab() {
             type="text"
             fullWidth
             required
-            error={errors.title}
-            helperText={errors.title ? "Title is required" : ""}
+            error={Boolean(errors.title)}
+            helperText={errors.title}
             value={editingTask?.title || ""}
             onChange={(e) =>
               setEditingTask({ ...editingTask, title: e.target.value })
@@ -251,8 +351,8 @@ function PlanTab() {
             type="date"
             fullWidth
             required
-            error={errors.dueDate}
-            helperText={errors.dueDate ? "Due Date is required" : ""}
+            error={Boolean(errors.dueDate)}
+            helperText={errors.dueDate}
             InputLabelProps={{ shrink: true }}
             value={editingTask?.dueDate || ""}
             onChange={(e) =>
