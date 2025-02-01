@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 public class HabitDto {
-    private String title;
-    private String description;
-    private HabitType type;
+  private String title;
+  private String description;
+  private HabitType type;
 }

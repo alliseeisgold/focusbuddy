@@ -9,8 +9,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SignUpRequest {
-    private String username;
-    private String password;
-    private String telegramId;
-    private Role role;
+  private String username;
+  private String password;
+  private String telegramId;
+  private Role role;
 }
