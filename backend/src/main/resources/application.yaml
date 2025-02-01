@@ -1,19 +1,21 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
   application:
     name: focusbuddy
   datasource:
-    url: jdbc:postgresql://localhost:5432/postgres
-    username: postgres
-    password: postgres
+    url: ${DATASOURCE_URL}
+    username: ${DATASOURCE_USERNAME}
+    password: ${DATASOURCE_PASSWORD}
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: ${JPA_HIBERNATE_DDL_AUTO}
     show-sql: true
     properties:
       hibernate:
         format_sql: true
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 logging:
   level:
@@ -22,9 +24,9 @@ logging:
         security: DEBUG
 token:
   signin:
-    key: "dGhpcyBpc19hX3ZlcnlfbG9uZ19hbmRfc2VjdXJlX3NlY3JldF9rZXlfZm9yX2p3dA=="
+    key: ${JWT_SECRET_KEY}
 
 security:
   jwt:
     refresh:
-      expiration: 604800
+      expiration: ${JWT_REFRESH_EXPIRATION}

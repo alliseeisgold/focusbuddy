@@ -1,40 +1,24 @@
-name: FocusBuddy Pipeline
-
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-
 jobs:
-  build-and-test:
-    name: Build, Test Backend
+  build:
     runs-on: ubuntu-latest
+    env:
+      DATASOURCE_URL: ${{ secrets.DATASOURCE_URL }}
+      DATASOURCE_USERNAME: ${{ secrets.DATASOURCE_USERNAME }}
+      DATASOURCE_PASSWORD: ${{ secrets.DATASOURCE_PASSWORD }}
+      JPA_HIBERNATE_DDL_AUTO: ${{ secrets.JPA_HIBERNATE_DDL_AUTO }}
+      SERVER_PORT: ${{ secrets.SERVER_PORT }}
+      JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+      JWT_REFRESH_EXPIRATION: ${{ secrets.JWT_REFRESH_EXPIRATION }}
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set Up JDK 17
+      - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
-          java-version: 17
-          cache: maven
+          java-version: '17'
 
-      - name: Verify Maven Wrapper
-        run: |
-          cd backend
-          mvn -N io.takari:maven:wrapper
-
-      - name: Install Dependencies
-        run: |
-          cd backend
-          ./mvnw clean install -DskipTests -Dcheckstyle.skip=true
-
-      - name: Run Tests
-        run: |
-          cd backend
-          mvn test
+      - name: Build and test
+        run: mvn clean test
