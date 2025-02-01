@@ -8,14 +8,30 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
-      DATASOURCE_URL: ${{ secrets.DATASOURCE_URL }}
-      DATASOURCE_USERNAME: ${{ secrets.DATASOURCE_USERNAME }}
-      DATASOURCE_PASSWORD: ${{ secrets.DATASOURCE_PASSWORD }}
-      JPA_HIBERNATE_DDL_AUTO: ${{ secrets.JPA_HIBERNATE_DDL_AUTO }}
-      SERVER_PORT: ${{ secrets.SERVER_PORT }}
+      DATASOURCE_URL: jdbc:postgresql://localhost:5432/testdb
+      DATASOURCE_USERNAME: postgres
+      DATASOURCE_PASSWORD: postgres
+      JPA_HIBERNATE_DDL_AUTO: update
+      SERVER_PORT: 8080
       JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
       JWT_REFRESH_EXPIRATION: ${{ secrets.JWT_REFRESH_EXPIRATION }}
+      HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
 
     steps:
       - name: Checkout repository
@@ -27,6 +43,6 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Build and test
+      - name: Run tests
         working-directory: backend
         run: mvn clean test

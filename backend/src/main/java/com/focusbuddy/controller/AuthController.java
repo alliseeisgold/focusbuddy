@@ -81,7 +81,6 @@ public class AuthController {
 
     User user = storedToken.getUser();
     String newAccess = jwtService.generateAccessToken(user);
-    // Можно заново сгенерировать refreshToken, если хотите
     RefreshToken newRefresh = refreshTokenService.createRefreshToken(user);
 
     return ResponseEntity.ok(new AuthResponse("Token refreshed", newAccess, newRefresh.getToken()));
