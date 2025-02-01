@@ -1,0 +1,30 @@
+spring:
+  application:
+    name: focusbuddy
+  datasource:
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+server:
+  port: 8080
+
+logging:
+  level:
+    org:
+      springframework:
+        security: DEBUG
+token:
+  signin:
+    key: "dGhpcyBpc19hX3ZlcnlfbG9uZ19hbmRfc2VjdXJlX3NlY3JldF9rZXlfZm9yX2p3dA=="
+
+security:
+  jwt:
+    refresh:
+      expiration: 604800
