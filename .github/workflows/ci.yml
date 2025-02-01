@@ -1,4 +1,4 @@
-name: CI Build
+name: FocusBuddy Backend Test
 
 on:
   push:
@@ -28,4 +28,5 @@ jobs:
           java-version: '17'
 
       - name: Build and test
+        working-directory: backend
         run: mvn clean test
